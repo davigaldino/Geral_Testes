@@ -1,0 +1,16 @@
+Nome,Idade,Cidade,Salario,Departamento,Data_Contratacao,Ativo
+João Silva,28,São Paulo,4500.00,Tecnologia,2022-03-15,True
+Maria Santos,32,Rio de Janeiro,5200.00,Marketing,2021-07-22,True
+Pedro Oliveira,25,Belo Horizonte,3800.00,Vendas,2023-01-10,True
+Ana Costa,29,Salvador,4100.00,Recursos Humanos,2022-11-05,True
+Carlos Ferreira,35,Fortaleza,5800.00,Financeiro,2020-05-18,True
+Lucia Rodrigues,27,Recife,3900.00,Tecnologia,2023-02-28,True
+Roberto Almeida,31,Brasília,4700.00,Marketing,2021-09-14,True
+Fernanda Lima,26,Curitiba,3600.00,Vendas,2023-04-12,True
+Marcos Pereira,33,Porto Alegre,5400.00,Financeiro,2020-12-03,True
+Juliana Martins,24,Manaus,3400.00,Recursos Humanos,2023-06-20,True
+Ricardo Souza,30,Goiânia,4300.00,Tecnologia,2022-08-07,True
+Patricia Gomes,28,Campinas,4000.00,Marketing,2022-05-25,True
+Andre Santos,29,Belém,3700.00,Vendas,2023-03-08,True
+Camila Silva,31,Vitória,4600.00,Financeiro,2021-11-30,True
+Diego Costa,27,Natal,3500.00,Recursos Humanos,2023-05-15,True
