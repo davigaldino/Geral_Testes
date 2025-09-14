@@ -135,6 +135,18 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now sharepoint-export.timer
 ```
 
+### Versão simples (usuário/senha dentro do script)
+Arquivo: `sharepoint_export_simple.py`
+
+1. Abra o arquivo e preencha no topo: `CLIENT_ID`, `SHAREPOINT_USERNAME`, `SHAREPOINT_PASSWORD`, `SHAREPOINT_SITE_URL`, `SHAREPOINT_LIST_TITLE`, e demais opções (upload, pasta, etc.).
+2. Execute:
+```
+python sharepoint_export_simple.py
+```
+3. Para Windows, você pode agendar este arquivo no Task Scheduler da mesma forma (Action: `python C:\caminho\projeto\sharepoint_export_simple.py`).
+
+Observação: esta variante guarda credenciais em texto claro; use apenas em ambientes controlados e restritos.
+
 ### Observações importantes
 - Se sua conta usa MFA, use client credentials com permissões de aplicativo ou use um App com ROPC desaconselhado. Preferível client credentials.
 - Para campos de pessoa, escolha FIELDS com o nome interno desejado (ex.: `Author`, `Editor`) ou adapte o script para expandir subpropriedades.
