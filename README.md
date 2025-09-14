@@ -40,6 +40,16 @@ python sharepoint_export.py
 ```
 Saída será criada em `output/` com data no nome.
 
+#### Upload automático para SharePoint (opcional)
+No `.env` defina:
+```
+UPLOAD_TO_SHAREPOINT=true
+DEST_DRIVE_NAME=Documents
+DEST_FOLDER_PATH=Exportacoes/Curadoria
+DEST_FILE_NAME=lista_curadoria_{date}.csv
+```
+O script fará upload do CSV para a pasta indicada na document library do site.
+
 ### Teste rápido
 1. Verifique o Python: `python -V`
 2. Ative o venv e rode: `python sharepoint_export.py`
@@ -54,6 +64,40 @@ Exemplo para rodar às 06:00 todos os dias (ajuste caminhos):
 ```
 0 6 * * * cd /caminho/para/workspace && . .venv/bin/activate && /usr/bin/python /caminho/para/workspace/sharepoint_export.py >> /caminho/para/workspace/output/cron.log 2>&1
 ```
+
+### Windows (Task Scheduler)
+1. Instale Python 3.9+ no Windows.
+2. Crie uma venv (opcional, recomendado):
+```
+python -m venv .venv
+.\.venv\Scripts\pip install -r requirements.txt
+```
+3. Ajuste o `.env` com credenciais e habilite `UPLOAD_TO_SHAREPOINT=true` se quiser enviar o arquivo para a pasta do SharePoint.
+4. Use o script PowerShell abaixo para execução e agendamento.
+
+Crie `run_export.ps1`:
+```
+Param(
+  [string]$ProjectDir = "$PSScriptRoot"
+)
+Set-Location $ProjectDir
+if (Test-Path ".env") {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^(?<k>[^#=]+)=(?<v>.*)$') {
+      $k=$Matches['k'].Trim(); $v=$Matches['v']
+      [System.Environment]::SetEnvironmentVariable($k,$v,"Process")
+    }
+  }
+}
+$python = Join-Path $ProjectDir ".venv/Scripts/python.exe"
+if (-not (Test-Path $python)) { $python = "python" }
+& $python (Join-Path $ProjectDir "sharepoint_export.py")
+```
+
+Agendar no Task Scheduler:
+- Action: `powershell.exe -ExecutionPolicy Bypass -File C:\caminho\para\projeto\run_export.ps1`
+- Start in: `C:\caminho\para\projeto`
+- Trigger diário às 06:00
 
 ### Agendamento com systemd (alternativa ao cron)
 Crie `/etc/systemd/system/sharepoint-export.service`:
