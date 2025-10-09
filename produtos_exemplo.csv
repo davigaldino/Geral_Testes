@@ -1,0 +1,13 @@
+Produto_ID,Nome_Produto,Preco,Categoria,Estoque,Data_Cadastro,Ativo
+1,Laptop,2500.0,Eletrônicos,10,2024-01-15,True
+2,Mouse,50.0,Acessórios,50,2024-01-16,True
+3,Teclado,120.0,Acessórios,30,2024-01-17,True
+4,Monitor,,Eletrônicos,15,2024-01-18,True
+5,Cabo USB,15.0,Acessórios,100,2024-01-19,True
+6,Fone,200.0,Acessórios,25,2024-01-20,True
+7,Webcam,300.0,Acessórios,-10,2024-01-21,True
+8,Impressora,400.0,Eletrônicos,8,2024-01-22,True
+9,Scanner,150.0,Eletrônicos,12,2024-01-23,True
+10,Tablet,1200.0,Eletrônicos,5,data_invalida,True
+11,Laptop,2500.0,Eletrônicos,10,2024-01-15,True
+12,Mouse,50.0,Acessórios,50,2024-01-16,True
