@@ -1,0 +1,32 @@
+# Dependências para Sistema de Relatórios de Validação e Qualidade de Dados
+# Autor: Assistente AI
+# Data: 2024
+
+# Manipulação de dados
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Visualização de dados
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# Geração de relatórios Excel
+openpyxl>=3.0.0
+
+# Geração de relatórios PDF
+reportlab>=3.6.0
+
+# Processamento de dados e utilitários
+python-dateutil>=2.8.0
+pytz>=2022.1
+
+# Opcional: Para melhor performance com datasets grandes
+# numba>=0.56.0
+
+# Opcional: Para análise estatística avançada
+# scipy>=1.9.0
+# scikit-learn>=1.1.0
+
+# Opcional: Para suporte a mais formatos de arquivo
+# xlrd>=2.0.0  # Para ler arquivos Excel antigos
+# xlsxwriter>=3.0.0  # Para escrita avançada de Excel
