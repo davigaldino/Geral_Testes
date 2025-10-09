@@ -1,0 +1,7 @@
+row,column,issue_type,description,expected,found,severity,dataset
+0,cpf,regex_mismatch,CPF em formato inválido,\d{11},123-456,medium,clientes
+1,email,regex_mismatch,Email sem @,.*@.*,joao.example.com,low,clientes
+2,nome,null_value,Nome ausente,non_empty,,high,clientes
+3,id,duplicate,ID duplicado,único,42,high,clientes
+4,idade,type_mismatch,Idade não é numérica,inteiro,dez,medium,clientes
+5,salario,range_violation,Salário negativo,>=0,-1000,medium,clientes
