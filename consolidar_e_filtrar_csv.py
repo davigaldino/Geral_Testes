@@ -101,6 +101,128 @@ def higienizar_nomes_colunas(df: pd.DataFrame) -> pd.DataFrame:
     except Exception:
         return df
 
+def sanitizar_conteudo_csv(texto: str) -> str:
+    """Normaliza conteúdo bruto de CSV antes do parse.
+    - Converte quebras para \n
+    - Remove BOM/espaços invisíveis comuns
+    - Converte aspas curvas para aspas duplas ASCII
+    - Converte \" em "" apenas DENTRO de campos citados
+    """
+    try:
+        if texto is None:
+            return ''
+        # Normalizar quebras
+        s = texto.replace('\r\n', '\n').replace('\r', '\n')
+        # Remover caracteres invisíveis comuns
+        s = s.replace('\ufeff', '')
+        s = s.replace('\u200B', '').replace('\u200C', '').replace('\u200D', '')
+        s = s.replace('\u00A0', ' ')
+        # NÃO converter aspas curvas para ASCII para não criar citações falsas
+
+        # Converter \" -> "" apenas quando DENTRO de um campo citado
+        out = []
+        i = 0
+        n = len(s)
+        inside = False
+        while i < n:
+            ch = s[i]
+            if ch == '"':
+                # Aspas duplas duplicadas dentro de campo citado permanecem como ""
+                if inside and i + 1 < n and s[i + 1] == '"':
+                    out.append('"')
+                    out.append('"')
+                    i += 2
+                    continue
+                inside = not inside
+                out.append(ch)
+                i += 1
+                continue
+            if inside and ch == '\\' and i + 1 < n and s[i + 1] == '"':
+                # Normalizar estilo backslash-escape para estilo CSV de aspas dobradas
+                out.append('"')
+                out.append('"')
+                i += 2
+                continue
+            out.append(ch)
+            i += 1
+        return ''.join(out)
+    except Exception:
+        return texto or ''
+
+def parse_csv_tolerante(conteudo: str, delimitador: str) -> list:
+    """Parser CSV tolerante a dados quebrados.
+    - Respeita campos entre aspas duplas
+    - Trata "" como aspas literal
+    - Trata "" como aspas literal
+    - Não trata \\ como escape de quebra de linha
+    - Permite newlines dentro de campos citados
+    Retorna lista de linhas (lista de campos como strings).
+    """
+    linhas = []
+    campo_chars = []
+    linha_atual = []
+    dentro = False
+    campo_iniciado = False
+    i = 0
+    n = len(conteudo)
+
+    while i < n:
+        ch = conteudo[i]
+        if ch == '"':
+            if dentro:
+                # Backslash-quote dentro de campo citado -> aspas literal, não fecha
+                if i > 0 and conteudo[i - 1] == '\\':
+                    campo_chars[-1] = '"'
+                    i += 1
+                    campo_iniciado = True
+                    continue
+                # Aspas duplicadas -> aspas literal
+                if i + 1 < n and conteudo[i + 1] == '"':
+                    campo_chars.append('"')
+                    i += 2
+                    campo_iniciado = True
+                    continue
+                # Fecha citação
+                dentro = False
+                i += 1
+                continue
+            else:
+                # Abre citação apenas se o campo ainda não iniciou
+                if not campo_iniciado and len(campo_chars) == 0:
+                    dentro = True
+                    i += 1
+                    continue
+                # Aspas fora de citação em campo já iniciado -> tratar como literal
+                campo_chars.append('"')
+                i += 1
+                campo_iniciado = True
+                continue
+        elif ch == delimitador and not dentro:
+            linha_atual.append(''.join(campo_chars))
+            campo_chars = []
+            campo_iniciado = False
+            i += 1
+            continue
+        elif ch == '\n' and not dentro:
+            linha_atual.append(''.join(campo_chars))
+            linhas.append(linha_atual)
+            linha_atual = []
+            campo_chars = []
+            campo_iniciado = False
+            i += 1
+            continue
+        else:
+            campo_chars.append(ch)
+            campo_iniciado = True
+            i += 1
+
+    # Finalizar último campo/linha
+    linha_atual.append(''.join(campo_chars))
+    # Evitar linha vazia final extra
+    if not (len(linha_atual) == 1 and linha_atual[0] == ''):
+        linhas.append(linha_atual)
+    return linhas
+
 def normalizar_csvs(pasta_entrada: str, pasta_saida: str = "csv_normalizados") -> str:
     """Normaliza TODOS os CSVs de pasta_entrada para um padrão único e grava em pasta_saida.
     Padrão: delimitador ';', encoding 'utf-8-sig', lineterminator='\n', quote '"'.
@@ -139,10 +261,12 @@ def normalizar_csvs(pasta_entrada: str, pasta_saida: str = "csv_normalizados") -
 
             for enc in encodings:
                 try:
-                    with open(caminho_in, 'r', encoding=enc, newline='') as fin:
+                    with open(caminho_in, 'r', encoding=enc, errors='replace', newline='') as fin:
+                        conteudo = fin.read()
+                        # Sanitizar conteúdo antes de detectar delimitador e ler
+                        conteudo = sanitizar_conteudo_csv(conteudo)
                         # Detectar delimitador por amostra; fallback para ';' ou ','
-                        amostra = fin.read(4096)
-                        fin.seek(0)
+                        amostra = conteudo[:4096]
                         try:
                             delimitador = csv.Sniffer().sniff(amostra, delimiters=';,|\t').delimiter
                         except Exception:
@@ -155,14 +279,8 @@ def normalizar_csvs(pasta_entrada: str, pasta_saida: str = "csv_normalizados") -
                             }
                             delimitador = max(counts, key=counts.get) if any(counts.values()) else ';'
 
-                        reader = csv.reader(
-                            fin,
-                            delimiter=delimitador,
-                            quotechar='"',
-                            # IMPORTANTE: não usar escapechar para evitar tratar '\\' como escape de newline
-                            doublequote=True,
-                            skipinitialspace=False,
-                        )
+                        # Parser tolerante para evitar perdas quando há barra invertida antes de aspas no fim do campo
+                        linhas_parseadas = parse_csv_tolerante(conteudo, delimitador)
 
                         # Abrir saída com padrão definido
                         with open(caminho_out, 'w', encoding='utf-8-sig', newline='') as fout:
@@ -176,10 +294,7 @@ def normalizar_csvs(pasta_entrada: str, pasta_saida: str = "csv_normalizados") -
                             )
 
                             # Ler cabeçalho
-                            try:
-                                header = next(reader)
-                            except StopIteration:
-                                header = []
+                            header = linhas_parseadas[0] if len(linhas_parseadas) > 0 else []
 
                             header = [limpar_texto(str(h)) for h in header]
                             largura = len(header)
@@ -201,7 +316,7 @@ def normalizar_csvs(pasta_entrada: str, pasta_saida: str = "csv_normalizados") -
 
                             # Stream de linhas, garantindo largura consistente
                             linhas_escritas = 0
-                            for row in reader:
+                            for row in linhas_parseadas[1:]:
                                 if row is None:
                                     continue
                                 row = [limpar_texto(str(x)) for x in row]
@@ -249,8 +364,9 @@ def ler_csv_manual(caminho_arquivo, encoding_preferido):
         for encoding in encodings_para_tentar:
             try:
                 with open(caminho_arquivo, 'r', encoding=encoding, newline='') as arquivo:
-                    amostra = arquivo.read(4096)
-                    arquivo.seek(0)
+                    conteudo = arquivo.read()
+                    conteudo = sanitizar_conteudo_csv(conteudo)
+                    amostra = conteudo[:4096]
                     try:
                         dialect = csv.Sniffer().sniff(amostra, delimiters=';,|\t')
                         delimitador = dialect.delimiter
@@ -264,15 +380,7 @@ def ler_csv_manual(caminho_arquivo, encoding_preferido):
                         }
                         delimitador = max(counts, key=counts.get) if any(counts.values()) else ';'
 
-                    leitor = csv.reader(
-                        arquivo,
-                        delimiter=delimitador,
-                        quotechar='"',
-                        # NÃO usar escapechar para não tratar barra invertida como escape
-                        doublequote=True,
-                        skipinitialspace=False,
-                    )
-                    linhas = list(leitor)
+                    linhas = parse_csv_tolerante(conteudo, delimitador)
                     if not linhas or len(linhas) < 2:
                         continue
 
@@ -362,6 +470,32 @@ def consolidar_e_filtrar_csv(pasta_entrada, arquivo_saida_consolidado="consolida
                 {'encoding': 'latin-1', 'sep': 'manual', 'desc': 'Manual+Latin-1'}
             ]
            
+            # Priorizar leitura tolerante do CSV já normalizado (padrão ; e UTF-8-SIG)
+            try:
+                with open(caminho_arquivo, 'r', encoding='utf-8-sig', errors='replace', newline='') as f0:
+                    conteudo0 = sanitizar_conteudo_csv(f0.read())
+                linhas0 = parse_csv_tolerante(conteudo0, ';')
+                if linhas0 and len(linhas0) > 1:
+                    header0 = deduplicar_cabecalhos([str(h).strip() for h in linhas0[0]])
+                    largura0 = len(header0)
+                    dados0 = []
+                    for row in linhas0[1:]:
+                        r = [limpar_texto(str(x)) for x in row]
+                        if len(r) < largura0:
+                            r.extend([''] * (largura0 - len(r)))
+                        elif len(r) > largura0:
+                            r = r[:largura0]
+                        dados0.append(r)
+                    df = pd.DataFrame(dados0, columns=header0, dtype=str)
+                    if len(df) > 0:
+                        df.reset_index(drop=True, inplace=True)
+                        df = higienizar_nomes_colunas(df)
+                        lista_dataframes.append(df)
+                        print(f"✅ Processado arquivo {i}/{len(arquivos_csv)}: {nome_arquivo} ({len(df)} linhas) [Normalizado+tolerante]")
+                        continue
+            except Exception:
+                pass
+
             for estrategia in estrategias:
                 try:
                     if estrategia['sep'] == 'manual':
@@ -375,17 +509,44 @@ def consolidar_e_filtrar_csv(pasta_entrada, arquivo_saida_consolidado="consolida
                             print(f"✅ Processado arquivo {i}/{len(arquivos_csv)}: {nome_arquivo} ({len(df)} linhas) [{estrategia['desc']}]")
                             break
                     else:
-                        # Leitura normal com pandas
-                        df = pd.read_csv(
-                            caminho_arquivo,
-                            dtype=str,
-                            low_memory=False,
-                            encoding=estrategia['encoding'],
-                            sep=estrategia['sep'],
-                            quotechar='"',
-                            engine='python',  # usar engine python para maior robustez
-                            on_bad_lines='warn',
-                        )
+                        # Leitura com pandas; se falhar, tentar via parser tolerante
+                        try:
+                            df = pd.read_csv(
+                                caminho_arquivo,
+                                dtype=str,
+                                low_memory=False,
+                                encoding=estrategia['encoding'],
+                                sep=estrategia['sep'],
+                                quotechar='"',
+                                doublequote=True,
+                                engine='python',
+                                on_bad_lines='error',
+                            )
+                        except Exception:
+                            # Fallback: ler inteiro, sanitizar e usar parser tolerante
+                            with open(caminho_arquivo, 'r', encoding=estrategia['encoding'], errors='replace', newline='') as f2:
+                                conteudo2 = sanitizar_conteudo_csv(f2.read())
+                            # Detectar delimitador novamente
+                            amostra2 = conteudo2[:4096]
+                            try:
+                                delim2 = csv.Sniffer().sniff(amostra2, delimiters=';,|\t').delimiter
+                            except Exception:
+                                counts2 = {';': amostra2.count(';'), ',': amostra2.count(','), '|': amostra2.count('|'), '\t': amostra2.count('\t')}
+                                delim2 = max(counts2, key=counts2.get) if any(counts2.values()) else (estrategia['sep'] or ';')
+                            linhas2 = parse_csv_tolerante(conteudo2, delim2)
+                            if not linhas2 or len(linhas2) < 2:
+                                raise
+                            header2 = deduplicar_cabecalhos([str(h).strip() for h in linhas2[0]])
+                            dados2 = []
+                            largura2 = len(header2)
+                            for row in linhas2[1:]:
+                                r = [limpar_texto(str(x)) for x in row]
+                                if len(r) < largura2:
+                                    r.extend([''] * (largura2 - len(r)))
+                                elif len(r) > largura2:
+                                    r = r[:largura2]
+                                dados2.append(r)
+                            df = pd.DataFrame(dados2, columns=header2, dtype=str)
                         if len(df) > 0:
                             # Garantir que o DataFrame tenha índice único
                             df.reset_index(drop=True, inplace=True)
