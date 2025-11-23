@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Configurações - Bitcoin Analysis{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Configurações</h2>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Status da API</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Modo Somente Leitura:</strong> 
+                    {% if api_read_only_mode %}
+                        <span class="badge bg-warning">ATIVADO</span>
+                    {% else %}
+                        <span class="badge bg-success">DESATIVADO</span>
+                    {% endif %}
+                </p>
+                <p><strong>Testnet:</strong> 
+                    {% if binance_testnet %}
+                        <span class="badge bg-info">ATIVADO</span>
+                    {% else %}
+                        <span class="badge bg-secondary">DESATIVADO</span>
+                    {% endif %}
+                </p>
+                <small class="text-muted">
+                    Para alterar essas configurações, edite o arquivo .env e reinicie o servidor.
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Informações</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Configuração via .env:</strong></p>
+                <ul>
+                    <li>BINANCE_API_KEY</li>
+                    <li>BINANCE_API_SECRET</li>
+                    <li>API_READ_ONLY_MODE</li>
+                    <li>BINANCE_TESTNET</li>
+                </ul>
+                <p class="text-danger">
+                    <strong>Importante:</strong> Nunca compartilhe suas chaves de API!
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
