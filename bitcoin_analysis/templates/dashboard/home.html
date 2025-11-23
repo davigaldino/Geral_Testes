@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Bitcoin Analysis{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Bitcoin Analysis Platform</h1>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Preço Atual BTC/USDT</h5>
+            </div>
+            <div class="card-body">
+                {% if current_price %}
+                    <h2 class="text-primary">${{ current_price.price|floatformat:2 }}</h2>
+                    <small class="text-muted">Atualizado em: {{ current_price.updated_at|date:"d/m/Y H:i:s" }}</small>
+                {% else %}
+                    <p class="text-muted">Preço não disponível</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Links Rápidos</h5>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'dashboard:chart' '1h' %}" class="btn btn-primary me-2">Gráfico 1H</a>
+                <a href="{% url 'dashboard:chart' '4h' %}" class="btn btn-primary me-2">Gráfico 4H</a>
+                <a href="{% url 'dashboard:chart' '1d' %}" class="btn btn-primary me-2">Gráfico 1D</a>
+                <a href="{% url 'dashboard:signals' %}" class="btn btn-success">Sinais</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Últimos Sinais</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_signals %}
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Intervalo</th>
+                                <th>Sinal</th>
+                                <th>Confiança</th>
+                                <th>Razões</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for signal in recent_signals %}
+                            <tr>
+                                <td>{{ signal.candle.open_time|date:"d/m/Y H:i" }}</td>
+                                <td>{{ signal.candle.interval }}</td>
+                                <td>
+                                    {% if signal.signal_type == 'BUY' %}
+                                        <span class="badge bg-success">COMPRA</span>
+                                    {% elif signal.signal_type == 'SELL' %}
+                                        <span class="badge bg-danger">VENDA</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">MANTER</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ signal.confidence_score }}%</td>
+                                <td>
+                                    <small>
+                                        {% for reason in signal.reasons|slice:":2" %}
+                                            {{ reason }}<br>
+                                        {% endfor %}
+                                    </small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-muted">Nenhum sinal disponível ainda.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

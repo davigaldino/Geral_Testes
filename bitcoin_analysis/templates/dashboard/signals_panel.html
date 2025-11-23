@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}Sinais - Bitcoin Analysis{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <h2>Painel de Sinais</h2>
+        <div class="btn-group" role="group">
+            <a href="?interval=1h" class="btn btn-sm {% if interval == '1h' %}btn-primary{% else %}btn-outline-primary{% endif %}">1H</a>
+            <a href="?interval=4h" class="btn btn-sm {% if interval == '4h' %}btn-primary{% else %}btn-outline-primary{% endif %}">4H</a>
+            <a href="?interval=1d" class="btn btn-sm {% if interval == '1d' %}btn-primary{% else %}btn-outline-primary{% endif %}">1D</a>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5>Compra</h5>
+                <h2>{{ buy_signals }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h5>Venda</h5>
+                <h2>{{ sell_signals }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <h5>Manter</h5>
+                <h2>{{ hold_signals }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5>Confiança Média</h5>
+                <h2>{{ avg_confidence|floatformat:1 }}%</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Sinais Recentes</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Preço</th>
+                                <th>Sinal</th>
+                                <th>Confiança</th>
+                                <th>Indicadores</th>
+                                <th>Razões</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for signal in signals %}
+                            <tr>
+                                <td>{{ signal.candle.open_time|date:"d/m/Y H:i" }}</td>
+                                <td>${{ signal.candle.close_price|floatformat:2 }}</td>
+                                <td>
+                                    {% if signal.signal_type == 'BUY' %}
+                                        <span class="badge bg-success">COMPRA</span>
+                                    {% elif signal.signal_type == 'SELL' %}
+                                        <span class="badge bg-danger">VENDA</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">MANTER</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar 
+                                            {% if signal.confidence_score >= 70 %}bg-success
+                                            {% elif signal.confidence_score >= 40 %}bg-warning
+                                            {% else %}bg-danger{% endif %}" 
+                                            role="progressbar" 
+                                            style="width: {{ signal.confidence_score }}%">
+                                            {{ signal.confidence_score }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small>
+                                        {% for ind in signal.indicators_used %}
+                                            <span class="badge bg-info">{{ ind }}</span>
+                                        {% endfor %}
+                                    </small>
+                                </td>
+                                <td>
+                                    <small>
+                                        {% for reason in signal.reasons %}
+                                            {{ reason }}<br>
+                                        {% endfor %}
+                                    </small>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    Nenhum sinal disponível ainda.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

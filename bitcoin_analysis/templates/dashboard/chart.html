@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Gráfico - Bitcoin Analysis{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <h2>Gráfico Histórico - {{ interval }}</h2>
+        <div class="btn-group" role="group">
+            {% for iv in intervals %}
+                <a href="{% url 'dashboard:chart' iv %}" 
+                   class="btn btn-sm {% if iv == interval %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    {{ iv }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div id="candlestick-chart" style="height: 600px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div id="rsi-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div id="macd-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Carregar dados do gráfico
+    fetch('{% url "dashboard:chart_data_api" interval %}')
+        .then(response => response.json())
+        .then(data => {
+            // Gráfico Candlestick
+            const candlestickTrace = {
+                x: data.dates,
+                open: data.opens,
+                high: data.highs,
+                low: data.lows,
+                close: data.closes,
+                type: 'candlestick',
+                name: 'BTC/USDT',
+                increasing: {line: {color: 'green'}},
+                decreasing: {line: {color: 'red'}}
+            };
+
+            const traces = [candlestickTrace];
+
+            // Adicionar EMA 50
+            if (data.ema50 && data.ema50.some(v => v !== null)) {
+                traces.push({
+                    x: data.dates,
+                    y: data.ema50,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'EMA 50',
+                    line: {color: 'blue', width: 1}
+                });
+            }
+
+            // Adicionar EMA 200
+            if (data.ema200 && data.ema200.some(v => v !== null)) {
+                traces.push({
+                    x: data.dates,
+                    y: data.ema200,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'EMA 200',
+                    line: {color: 'orange', width: 1}
+                });
+            }
+
+            // Adicionar Bollinger Bands
+            if (data.bb_upper && data.bb_lower) {
+                traces.push({
+                    x: data.dates,
+                    y: data.bb_upper,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'BB Upper',
+                    line: {color: 'gray', width: 1, dash: 'dash'},
+                    showlegend: false
+                });
+                traces.push({
+                    x: data.dates,
+                    y: data.bb_lower,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'BB Lower',
+                    line: {color: 'gray', width: 1, dash: 'dash'},
+                    fill: 'tonexty',
+                    fillcolor: 'rgba(128,128,128,0.1)'
+                });
+            }
+
+            const candlestickLayout = {
+                title: 'BTC/USDT - Candlestick',
+                xaxis: {type: 'date'},
+                yaxis: {title: 'Preço (USDT)'},
+                hovermode: 'x unified'
+            };
+
+            Plotly.newPlot('candlestick-chart', traces, candlestickLayout);
+
+            // Gráfico RSI
+            if (data.rsi && data.rsi.some(v => v !== null)) {
+                const rsiTrace = {
+                    x: data.dates,
+                    y: data.rsi,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'RSI',
+                    line: {color: 'purple'}
+                };
+
+                const rsiLayout = {
+                    title: 'RSI (14)',
+                    xaxis: {type: 'date'},
+                    yaxis: {title: 'RSI', range: [0, 100]},
+                    shapes: [
+                        {type: 'line', x0: data.dates[0], x1: data.dates[data.dates.length-1], y0: 70, y1: 70, line: {color: 'red', dash: 'dash'}},
+                        {type: 'line', x0: data.dates[0], x1: data.dates[data.dates.length-1], y0: 30, y1: 30, line: {color: 'green', dash: 'dash'}}
+                    ]
+                };
+
+                Plotly.newPlot('rsi-chart', [rsiTrace], rsiLayout);
+            }
+
+            // Gráfico MACD
+            if (data.macd && data.macd.some(v => v !== null)) {
+                const macdTraces = [
+                    {
+                        x: data.dates,
+                        y: data.macd,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'MACD',
+                        line: {color: 'blue'}
+                    },
+                    {
+                        x: data.dates,
+                        y: data.macd_signal,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Signal',
+                        line: {color: 'red'}
+                    }
+                ];
+
+                const macdLayout = {
+                    title: 'MACD',
+                    xaxis: {type: 'date'},
+                    yaxis: {title: 'MACD'}
+                };
+
+                Plotly.newPlot('macd-chart', macdTraces, macdLayout);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados:', error);
+            document.getElementById('candlestick-chart').innerHTML = '<p class="text-danger">Erro ao carregar dados do gráfico.</p>';
+        });
+</script>
+{% endblock %}
